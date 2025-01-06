@@ -1,36 +1,42 @@
-#include <SPIFFS.h>
+#include <Arduino.h>
 #include <animationmanager.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
 
-#define FORMAT_SPIFFS_IF_FAILED true
+// Перед использованием необходимо отдельно инициализировать SPIFFS
+// #define FORMAT_SPIFFS_IF_FAILED false
 
-// Перед использованием необходимо инициализировать SPIFFS
+// Название устройства
+#define DEVICE_NAME "ProtoBrain v0.1"
+// Задаем случайные UUID
+#define SERVICE_UUID "3a5516a4-816e-4852-a6fb-0552984f6ce8"
+#define CHARACTERISTIC_UUID "76422dba-046a-4e40-b6f3-f40fe04f0e8f"
+
 void setup()
 {
     Serial.begin(115200);
-    if (!SPIFFS.begin(true))
+    BLEDevice::init(DEVICE_NAME);
+    BLEServer *pServer = BLEDevice::createServer();
+    BLEService *pService = pServer->createService(SERVICE_UUID);
+    BLECharacteristic *pCharacteristics = pService->createCharacteristic(CHARACTERISTIC_UUID,
+                                                                         BLECharacteristic::PROPERTY_READ |
+                                                                             BLECharacteristic::PROPERTY_WRITE);
+    pCharacteristics->setValue("Cocal??");
+    pService->start();
+    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
+    pAdvertising->setMinPreferred(0x12);
+    BLEDevice::startAdvertising();
+    while (!Serial)
     {
-        Serial.println("Ошибка инициализации SPIFFS!");
-        return;
+        ;
     }
-
-    AnimationManager animationManager;
-
-    // Пример данных
-    std::vector<FacePart> faceParts = {
-        {"eye", {{std::vector<uint32_t>{0, 1, 0, 1, 0}}, {std::vector<uint32_t>{1, 0, 1, 0, 1}}}, {0, 0}, {1, 5}},
-        {"mouth", {{std::vector<uint32_t>{255, 128, 0}}, {std::vector<uint32_t>{0, 128, 255}}}, {5, 5}, {1, 3}}};
-
-    // Сохраняем анимации в JSON файл
-    if (animationManager.saveAnimationsToJson("/faceParts.json", faceParts))
-    {
-        Serial.println("Анимации успешно сохранены!");
-    }
-    else
-    {
-        Serial.println("Ошибка при сохранении анимаций.");
-    }
+    Serial.println("Characteristic defined! Now you can read it in your phone!");
 }
 
-void loop(){
-
+void loop()
+{
 }
